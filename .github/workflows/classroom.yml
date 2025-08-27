@@ -1,0 +1,49 @@
+name: Club Registration Form Autograding
+
+on: 
+  push:
+    branches: [ main, master ]
+    tags: [ 'step-*' ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    name: Autograding Club Registration Form
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history for tag checking
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, ctype, json, tokenizer, dom
+        coverage: none
+    
+    - name: Check Project Structure
+      run: php tests/structure_test.php
+    
+    - name: Run PHP Syntax Check
+      run: |
+        echo "Checking PHP syntax..."
+        find . -name "*.php" -not -path "./tests/*" -exec php -l {} \; || exit 1
+    
+    - name: Determine Current Step
+      id: step_check
+      run: php tests/step_detector.php
+    
+    - name: Run Step-Specific Tests
+      run: php tests/step_tests.php
+      env:
+        CURRENT_STEP: ${{ steps.step_check.outputs.step }}
+    
+    - name: Check Git Tags for Step Completion
+      run: php tests/tag_validator.php
